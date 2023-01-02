@@ -24,7 +24,9 @@
 
 #include "cmixer.h"
 #include "Utilities/structpack.h"
+#ifndef WATCH
 #include <SDL.h>
+#endif
 
 #include <vector>
 #include <fstream>
@@ -50,7 +52,9 @@ using namespace cmixer;
 
 static struct Mixer
 {
+#ifndef WATCH
 	SDL_mutex* sdlAudioMutex;
+#endif
 
 	std::list<Source*> sources;   // Linked list of active (playing) sources
 	int32_t pcmmixbuf[BUFFER_SIZE]; // Internal master buffer
@@ -59,32 +63,48 @@ static struct Mixer
 
 	void Init(int samplerate);
 
+#ifdef WATCH
+    void Process(float *const *dst, int len);
+#else
 	void Process(int16_t* dst, int len);
+#endif
 
 	void Lock();
 
 	void Unlock();
 
 	void SetMasterGain(double newGain);
+    
+#ifdef WATCH
+    void GetAudio(float *const *stream, int len);
+#endif
 } gMixer = {};
 
 //-----------------------------------------------------------------------------
 // Global init/shutdown
 
 static bool sdlAudioSubSystemInited = false;
+#ifndef WATCH
 static SDL_AudioDeviceID sdlDeviceID = 0;
+#endif
 
 void cmixer::InitWithSDL()
 {
 	if (sdlAudioSubSystemInited)
 		throw std::runtime_error("SDL audio subsystem already inited");
 
+#ifndef WATCH
 	if (0 != SDL_InitSubSystem(SDL_INIT_AUDIO))
 		throw std::runtime_error("couldn't init SDL audio subsystem");
+#endif
 
 	sdlAudioSubSystemInited = true;
 
 	// Init SDL audio
+#ifdef WATCH
+    gMixer.Init(44100);
+    gMixer.SetMasterGain(0.5);
+#else
 	SDL_AudioSpec fmt = {};
 	fmt.freq = 44100;
 	fmt.format = AUDIO_S16;
@@ -107,10 +127,12 @@ void cmixer::InitWithSDL()
 
 	// Start audio
 	SDL_PauseAudioDevice(sdlDeviceID, 0);
+#endif
 }
 
 void cmixer::ShutdownWithSDL()
 {
+#ifndef WATCH
 	if (sdlDeviceID)
 	{
 		SDL_CloseAudioDevice(sdlDeviceID);
@@ -126,6 +148,7 @@ void cmixer::ShutdownWithSDL()
 		SDL_QuitSubSystem(SDL_INIT_AUDIO);
 		sdlAudioSubSystemInited = false;
 	}
+#endif
 }
 
 double cmixer::GetMasterGain()
@@ -138,22 +161,35 @@ void cmixer::SetMasterGain(double newGain)
 	gMixer.SetMasterGain(newGain);
 }
 
+#ifdef WATCH
+void cmixer::GetAudio(float *const *stream, int len)
+{
+    gMixer.Process(stream, len);
+}
+#endif
+
 //-----------------------------------------------------------------------------
 // Global mixer impl
 
 void Mixer::Lock()
 {
+#ifndef WATCH
 	SDL_LockMutex(sdlAudioMutex);
+#endif
 }
 
 void Mixer::Unlock()
 {
+#ifndef WATCH
 	SDL_UnlockMutex(sdlAudioMutex);
+#endif
 }
 
 void Mixer::Init(int newSamplerate)
 {
+#ifndef WATCH
 	sdlAudioMutex = SDL_CreateMutex();
+#endif
 
 	samplerate = newSamplerate;
 	gain = FX_UNIT;
@@ -166,15 +202,21 @@ void Mixer::SetMasterGain(double newGain)
 	gain = FX_FROM_FLOAT(newGain);
 }
 
+#ifdef WATCH
+void Mixer::Process(float *const *dst, int len)
+#else
 void Mixer::Process(int16_t* dst, int len)
+#endif
 {
 	// Process in chunks of BUFFER_SIZE if `len` is larger than BUFFER_SIZE
+#ifndef WATCH
 	while (len > BUFFER_SIZE)
 	{
 		Process(dst, BUFFER_SIZE);
 		dst += BUFFER_SIZE;
 		len -= BUFFER_SIZE;
 	}
+#endif
 
 	// Zeroset internal buffer
 	memset(pcmmixbuf, 0, len * sizeof(pcmmixbuf[0]));
@@ -199,11 +241,24 @@ void Mixer::Process(int16_t* dst, int len)
 	Unlock();
 
 	// Copy internal buffer to destination and clip
+#ifdef WATCH
+    float *const  leftBuffer = dst[0];
+    float *const rightBuffer = dst[1];
+    for (int i = 0; i < len; i++) {
+        int x = (pcmmixbuf[i] * gain) >> FX_BITS;
+        if (i % 2 == 0) {
+            leftBuffer[i / 2] = x / 32768.;
+        } else {
+            rightBuffer[(i - 1) / 2] = x / 32768.;
+        }
+    }
+#else
 	for (int i = 0; i < len; i++)
 	{
 		int x = (pcmmixbuf[i] * gain) >> FX_BITS;
 		dst[i] = CLAMP(x, -32768, 32767);
 	}
+#endif
 }
 
 //-----------------------------------------------------------------------------

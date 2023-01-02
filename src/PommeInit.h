@@ -12,5 +12,7 @@ namespace Pomme
 	void Init();
 
 	void Shutdown();
+
+    void GetAudio(float *const *stream, int len);
 }
 

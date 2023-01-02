@@ -29,7 +29,7 @@
 #include <cstdint>
 #include "CompilerSupport/span.h"
 
-#define BUFFER_SIZE (512)
+#define BUFFER_SIZE (8192)
 
 namespace cmixer
 {
@@ -156,6 +156,10 @@ namespace cmixer
 	double GetMasterGain();
 
 	void SetMasterGain(double);
+
+#ifdef WATCH
+    void GetAudio(float *const *stream, int len);
+#endif
 
 	WavStream LoadWAVFromFile(const char* path);
 

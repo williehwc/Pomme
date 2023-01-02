@@ -74,3 +74,10 @@ void Pomme::Shutdown()
 	Pomme::Sound::ShutdownMixer();
 #endif
 }
+
+#ifdef WATCH
+void Pomme::GetAudio(float *const *stream, int len)
+{
+    Pomme::Sound::GetAudio(stream, len);
+}
+#endif

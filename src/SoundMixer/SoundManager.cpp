@@ -402,3 +402,10 @@ void Pomme::Sound::ShutdownMixer()
 		SndDisposeChannel(Pomme::Sound::gHeadChan->macChannel, true);
 	}
 }
+
+#ifdef WATCH
+void Pomme::Sound::GetAudio(float *const *stream, int len)
+{
+    cmixer::GetAudio(stream, len);
+}
+#endif

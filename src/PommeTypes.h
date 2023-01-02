@@ -86,8 +86,8 @@ typedef struct Rect { SInt16 top, left, bottom, right; } Rect;
 typedef Point* PointPtr;
 typedef Rect* RectPtr;
 
-typedef struct FixedPoint { Fixed x, y; } FixedPoint;
-typedef struct FixedRect { Fixed left, top, right, bottom; } FixedRect;
+typedef struct PommeFixedPoint { Fixed x, y; } PommeFixedPoint;
+typedef struct PommeFixedRect { Fixed left, top, right, bottom; } PommeFixedRect;
 
 //-----------------------------------------------------------------------------
 // FSSpec types

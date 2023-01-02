@@ -104,4 +104,8 @@ namespace Pomme::Sound
 	std::streampos GetSoundInfoFromAIFF(std::istream& input, SampledSoundInfo& info);
 
 	std::unique_ptr<Pomme::Sound::Codec> GetCodec(uint32_t fourCC);
+
+#ifdef WATCH
+    void GetAudio(float *const *stream, int len);
+#endif
 }
